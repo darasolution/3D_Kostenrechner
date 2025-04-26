@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D-Druck Kostenrechner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .calculator {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #757575;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #f06b0b;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background: #e9f7ef;
+            border-radius: 4px;
+            display: none;
+        }
+        #stl-info {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+        #weight, #volume {
+            background: #f9f9f9;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .slider-container input[type="range"] {
+            flex-grow: 1;
+        }
+        .slider-value {
+            min-width: 30px;
+            text-align: center;
+        }
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+        }
+        .hidden-field {
+            display: none;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltip-content {
+            visibility: hidden;
+            position: absolute;
+            z-index: 1;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 400px;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 125%;
+        }
+        .tooltip:hover .tooltip-content {
+            visibility: visible;
+        }
+        .tooltip .image-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .tooltip .image-placeholder {
+            flex: 1;
+            background: #f0f0f0;
+            height: 150px;
+            margin: 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            border: 1px dashed #ccc;
+        }
+        .tooltip label {
+            border-bottom: 1px dotted #666;
+            cursor: help;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            color: #856404;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>3D-Druck Kostenrechner</h1>
+        <div class="form-group">
+            <label for="stl-file">STL-Datei hochladen:</label>
+            <input type="file" id="stl-file" accept=".stl">
+            <div id="stl-info">Datei auswählen, um Preiskategorie zu berechnen.</div>
+            <div id="stl-error" class="error"></div>
+        </div>
+        <div class="form-group hidden-field" id="quantity-group">
+            <label for="quantity">Anzahl:</label>
+            <input type="number" id="quantity" value="1" min="1" step="1">
+            <div id="weight-warning" class="warning"></div>
+        </div>
+        <div class="form-group">
+            <label for="material">Material:</label>
+            <select id="material">
+                <option value="1.25">PLA (1,25 g/cm³)</option>
+                <option value="1.27">PETG (1,27 g/cm³)</option>
+                <option value="1.04">ABS (1,04 g/cm³)</option>
+            </select>
+        </div>
+        <div class="form-group hidden-field">
+            <label for="volume">Volumen (cm³):</label>
+            <input type="number" id="volume" readonly>
+        </div>
+        <div class="form-group">
+            <label>Füllgrad:</label>
+            <div class="slider-container">
+                <input type="range" id="infill" min="15" max="100" step="5" value="20">
+                <span id="infill-value" class="slider-value">20%</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="walls">Wandstärke (Linien):</label>
+            <select id="walls">
+                <option value="1">1 Linie (dünn)</option>
+                <option value="2" selected>2 Linien (standard)</option>
+                <option value="3">3 Linien (stark)</option>
+                <option value="4">4 Linien (sehr stark)</option>
+            </select>
+            <div class="checkbox-container">
+                <input type="checkbox" id="housing">
+                <div class="tooltip">
+                    <label for="housing">Gehäuse</label>
+                    <div class="tooltip-content">
+                        <div class="image-container">
+                            <div class="image-placeholder"><img src="/nogehaeuse.jpg"></div>
+                            <div class="image-placeholder"><img src="/gehaeuse.jpg"></div>
+                        </div>
+                        <p>Vergleichen Sie Ihr Objekt mit den Beispielbildern. Entspricht ihr Model eher einem Gehäuse oder einer Figur? Sofern ihr Model eher einem Gehäuse entspricht, wählen sie bitte die Option "Gehäuse" aus. <i>Ein Gehäuse hat mehr Wandfläche (innen und außen) als eine massive Figur.</i></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group hidden-field">
+            <label for="weight">Gewicht (g):</label>
+            <input type="number" id="weight" readonly>
+        </div>
+        <div class="form-group hidden-field">
+            <label for="time">Druckzeit (Stunden):</label>
+            <input type="number" id="time" placeholder="Auto oder manuell" step="0.5" min="0.5">
+        </div>
+        <div class="form-group hidden-field">
+            <label for="complexity">Komplexität:</label>
+            <select id="complexity">
+                <option value="1.0">Standard (kein Aufschlag)</option>
+                <option value="1.2">Mittel (+20%)</option>
+                <option value="1.5">Hoch (+50%)</option>
+            </select>
+        </div>
+        <button onclick="calculatePrice()">Preis berechnen</button>
+        <div id="result"></div>
+    </div>
+
+    <!-- Three.js Bibliothek -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/STLLoader.js"></script>
+
+    <script>
+        // Materialpreise pro Gramm
+        const materialPrices = {
+            '1.25': 0.15,  // PLA
+            '1.27': 0.18,  // PETG
+            '1.04': 0.20   // ABS
+        };
+
+        // Preiskategorien Definition
+        const priceCategories = {
+            'S': { min: 1, max: 10 },
+            'M': { min: 10.01, max: 20 },
+            'L': { min: 20.01, max: 30 },
+            'XL': { min:30.01, max: 40 },
+            'XXL': { min: 40.01, max: 50 }
+        };
+
+        // Funktion zur Bestimmung der Preiskategorie
+        function getPriceCategory(price) {
+            return Object.entries(priceCategories).find(
+                ([_, range]) => price >= range.min && price <= range.max
+            )?.[0] || 'Preis außerhalb der definierten Kategorien';
+        }
+
+        // Füllgrad-Slider-Update
+        document.getElementById('infill').addEventListener('input', function() {
+            document.getElementById('infill-value').textContent = this.value + '%';
+            updateWeightCalculation();
+        });
+
+        // Wandstärke-Update
+        document.getElementById('walls').addEventListener('change', updateWeightCalculation);
+        document.getElementById('material').addEventListener('change', updateWeightCalculation);
+        document.getElementById('housing').addEventListener('change', updateWeightCalculation);
+
+        // STL-Datei analysieren
+        document.getElementById('stl-file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('stl-error').textContent = '';
+            document.getElementById('weight-warning').style.display = 'none';
+            document.getElementById('quantity').style.borderColor = '#ddd';
+            document.getElementById('quantity-group').classList.add('hidden-field');
+            document.getElementById('quantity').value = '1';
+
+            if (!file.name.toLowerCase().endsWith('.stl')) {
+                document.getElementById('stl-error').textContent = 'Nur STL-Dateien sind erlaubt!';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    parseSTL(e.target.result);
+                } catch (error) {
+                    console.error("STL-Parser-Fehler:", error);
+                    document.getElementById('stl-error').textContent = 
+                        'Fehler beim Analysieren der STL-Datei. Bitte versuche eine andere Datei.';
+                }
+            };
+            reader.onerror = function() {
+                document.getElementById('stl-error').textContent = 'Datei konnte nicht gelesen werden!';
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // STL-Volumen berechnen
+        function parseSTL(stlData) {
+            if (!window.THREE || !THREE.STLLoader) {
+                throw new Error("Three.js oder STLLoader nicht geladen!");
+            }
+
+            const loader = new THREE.STLLoader();
+            const geometry = loader.parse(stlData);
+
+            const volume = calculateVolume(geometry);
+            const volumeCm3 = volume / 1000; // mm³ → cm³
+            document.getElementById('volume').value = volumeCm3.toFixed(2);
+            
+            updateWeightCalculation();
+        }
+
+        // Volumenberechnung für BufferGeometry
+        function calculateVolume(geometry) {
+            const positions = geometry.attributes.position.array;
+            let volume = 0;
+            
+            for (let i = 0; i < positions.length; i += 9) {
+                const p1x = positions[i], p1y = positions[i+1], p1z = positions[i+2];
+                const p2x = positions[i+3], p2y = positions[i+4], p2z = positions[i+5];
+                const p3x = positions[i+6], p3y = positions[i+7], p3z = positions[i+8];
+                
+                const crossX = p2y * p3z - p2z * p3y;
+                const crossY = p2z * p3x - p2x * p3z;
+                const crossZ = p2x * p3y - p2y * p3x;
+                volume += (p1x * crossX + p1y * crossY + p1z * crossZ) / 6.0;
+            }
+            
+            return Math.abs(volume);
+        }
+
+        // Berechnet die Mindestanzahl basierend auf dem Einzelgewicht
+        function calculateMinQuantity(singleWeight) {
+            return Math.ceil(10 / singleWeight);
+        }
+
+        // NEUE Zeitberechnung basierend auf Gewicht (15g-Schritte)
+        function calculateTimeFromWeight(weight, quantity = 1) {
+            const singleWeight = weight / quantity;
+            // Mindestgewicht für Einzelstück prüfen
+
+            if (singleWeight < 10 && quantity === 1) {
+                const minQuantity = calculateMinQuantity(singleWeight);
+                document.getElementById('quantity-group').classList.remove('hidden-field');
+                document.getElementById('quantity').style.borderColor = '#ff6b6b';
+                document.getElementById('weight-warning').textContent = 
+                    `Das Modell ist zu klein für einen Einzeldruck.(Einzelgewicht unter 10g) ` +
+                    `Mindestbestellmenge: ${minQuantity} Stück.`;
+                document.getElementById('weight-warning').style.display = 'block';
+                return 0;
+            }
+            
+            // Gesamtgewicht muss mindestens 10g sein
+            if (weight < 10) {
+                const minQuantity = calculateMinQuantity(singleWeight);
+                document.getElementById('weight-warning').textContent = 
+                    `Das Gesamtgewicht aller Modelle muss mindestens 10g betragen. ` +
+                    `Mindestbestellmenge: ${minQuantity} Stück.`;
+                document.getElementById('weight-warning').style.display = 'block';
+                return 0;
+            }
+
+            // Gewichtsklasse in 15g-Schritten (z.B. 18g → 30g)
+            const weightClass = Math.ceil(weight / 15) * 15;
+
+            // Korrekturfaktoren basierend auf Excel-Daten
+            const timeFactors = {
+                15: 1.8,   // Für 10-15g: +80% Zeit
+                30: 1.9,   // Für 18g (Model 2): +90%
+                45: 2.0,
+                60: 2.1,   // Für 55g (Model 1): +110%
+                75: 2.1,   // Für 76g (Model 3): +110%
+                90: 2.0,
+                105: 1.9,
+                120: 1.8,
+                135: 1.7,
+                150: 1.6,  // Für große Modelle: +60%
+                165: 1.5   // Für 166g (Model 5): +50%
+            };
+
+            // Basiszeit (kalibriert für 166g ≈ 4h Slicer-Zeit)
+            const baseTimePerGram = 0.018; // 0.018 h/g = 18h/kg
+            const baseTime = weight * baseTimePerGram;
+
+            // Zeit mit Korrekturfaktor
+            const factor = timeFactors[weightClass] || 1.5; // Default für sehr große Modelle
+            return baseTime * factor;
+        }
+
+        // Gewicht und Zeit berechnen
+        function updateWeightCalculation() {
+            const volume = parseFloat(document.getElementById('volume').value);
+            if (!volume) return;
+
+            // Warnungen zurücksetzen
+            document.getElementById('weight-warning').style.display = 'none';
+            document.getElementById('quantity').style.borderColor = '#ddd';
+
+            // Gewichtsberechnung (unverändert)
+            const density = parseFloat(document.getElementById('material').value);
+            const infill = parseInt(document.getElementById('infill').value) / 100;
+            const walls = parseInt(document.getElementById('walls').value);
+            const wallFactor = 0.15 * walls;
+            const effectiveVolume = volume * (wallFactor + (1 - wallFactor) * infill);
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            const singleWeight = effectiveVolume * density;
+            const totalWeight = singleWeight * quantity;
+            document.getElementById('weight').value = totalWeight.toFixed(2);
+
+            // NEUE Zeitberechnung
+            const estimatedTime = calculateTimeFromWeight(totalWeight, quantity);
+            document.getElementById('time').value = estimatedTime.toFixed(1);
+        }
+
+        // Event-Listener für Quantity
+        document.getElementById('quantity').addEventListener('input', function() {
+            updateWeightCalculation();
+        });
+
+        // Preis berechnen mit Gehäuse-Faktor
+        function calculatePrice() {
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+            const totalWeight = parseFloat(document.getElementById('weight').value);
+            const time = parseFloat(document.getElementById('time').value);
+            const complexity = parseFloat(document.getElementById('complexity').value);
+            const isHousing = document.getElementById('housing').checked;
+            const walls = parseInt(document.getElementById('walls').value);
+
+            if (!totalWeight) {
+                alert("Bitte laden Sie eine STL-Datei hoch!");
+                return;
+            }
+            if (!time) {
+                // Zeit ist 0, was bedeutet das Modell ist zu klein
+                // (Die eigentliche Meldung kommt schon von calculateTimeFromWeight)
+                return;
+            }
+
+            // Materialfaktor berechnen (2.0 für 1 Wand, linear abnehmend bis 1.16 für 4 Wände)
+            let housingFactor = 1.0;
+            if (isHousing) {
+                // Lineare Interpolation zwischen 2.0 (1 Wand) und 1.16 (4 Wände)
+                housingFactor = 2.0 - (walls - 1) * (2.0 - 1.16) / 3;
+            }
+
+            const density = parseFloat(document.getElementById('material').value);
+            const materialPrice = materialPrices[density];
+            // Kosten berechnen
+            const materialCost = totalWeight * materialPrice * housingFactor; // Materialspezifischer Preis mit Gehäuse-Faktor
+            const timeCost = time * 1.20; // 1,20 €/h
+            const powerConsumption = 0.5; // kW
+            const electricityPrice = 0.50; // €/kWh
+            const electricityCost = time * powerConsumption * electricityPrice; // Stromkosten
+            const total = (materialCost + timeCost + electricityCost) * complexity;
+
+            // Stückpreis berechnen
+            const pricePerPiece = total / quantity;
+
+            let housingInfo = '';
+            if (isHousing) {
+                housingInfo = `- Gehäuse-Faktor: ×${housingFactor.toFixed(2)} (bei ${walls} Wandlinien)<br>`;
+            }
+
+            // Bestimme die Preiskategorie
+            const category = getPriceCategory(total);
+            
+            document.getElementById('result').innerHTML = `
+                <strong>Preiskategorie: ${category} (${priceCategories[category].max} €)</strong><br>
+                ${quantity > 1 ? `<small>(${quantity} Stück)</small><br>` : ''}
+                <hr>
+                <em>Basierend auf Material und Druckzeit 
+                ${isHousing ? 'und Gehäusefaktor' : ''}</em><br>
+                <small style="color: #666;">Model wird mit 0.4 Wandbreite und 0.2 Schichthöhe gedruckt.</small>
+            `;
+            document.getElementById('result').style.display = "block";
+        }
+    </script>
+</body>
+</html>
