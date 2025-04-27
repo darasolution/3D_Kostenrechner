@@ -164,6 +164,7 @@
                 <option value="1.25">PLA (1,25 g/cm³)</option>
                 <option value="1.27">PETG (1,27 g/cm³)</option>
                 <option value="1.04">ABS (1,04 g/cm³)</option>
+                <option value="1.21">TPU (1,21 g/cm³)</option>
             </select>
         </div>
         <div class="form-group hidden-field">
@@ -191,8 +192,8 @@
                     <label for="housing">Gehäuse</label>
                     <div class="tooltip-content">
                         <div class="image-container">
-                            <div class="image-placeholder"><img src="/nogehaeuse.jpg"></div>
-                            <div class="image-placeholder"><img src="/gehaeuse.jpg"></div>
+                            <div class="image-placeholder"><img src="nogehaeuse.jpg"></div>
+                            <div class="image-placeholder"><img src="gehaeuse.jpg"></div>
                         </div>
                         <p>Vergleichen Sie Ihr Objekt mit den Beispielbildern. Entspricht ihr Model eher einem Gehäuse oder einer Figur? Sofern ihr Model eher einem Gehäuse entspricht, wählen sie bitte die Option "Gehäuse" aus. <i>Ein Gehäuse hat mehr Wandfläche (innen und außen) als eine massive Figur.</i></p>
                     </div>
@@ -228,7 +229,8 @@
         const materialPrices = {
             '1.25': 0.15,  // PLA
             '1.27': 0.18,  // PETG
-            '1.04': 0.20   // ABS
+            '1.04': 0.20,   // ABS
+            '1.21': 0.25   // TPU
         };
 
         // Preiskategorien Definition
